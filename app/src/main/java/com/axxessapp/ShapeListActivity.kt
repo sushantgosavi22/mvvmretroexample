@@ -18,17 +18,17 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.axxessapp.Model.ResultModel
 import com.axxessapp.adapters.ShapeAdapter
+import com.jakewharton.rxbinding2.widget.RxSearchView
 import com.axxessapp.databinding.ActivityMainBinding
+import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.activity_main.view.*
+import java.util.concurrent.TimeUnit
 
 
 class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener, ShapeListingViewModel.ApiCallBack {
 
     private var search: SearchView? = null
-    var query: String = ""
-    private val handler: Handler = Handler(Looper.getMainLooper())
-    private var workRunnable: Runnable? = null
-    val SEARCH_DELAY = 500
+    var queryText: String = ""
 
     private lateinit var appStoreHomeViewModel: ShapeListingViewModel
     lateinit var binding: ActivityMainBinding
@@ -46,7 +46,7 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
     private fun subscribeDataCallBack() {
         if(Utils.isInternetConnected(this)){
             showProgress()
-            appStoreHomeViewModel.getImagesList(this,query,this)
+            appStoreHomeViewModel.getImagesList(this,queryText,this)
         }else{
             Utils.showToast(this,getString(R.string.no_internet_connection))
         }
@@ -57,7 +57,7 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
         if(list.isNotEmpty()){
             binding.emptyView.visibility = View.GONE
         }else{
-            val text = if(query.isEmpty()){getString(R.string.search_for_result)}else{getString(R.string.no_record_found)+" $query ...."}
+            val text = if(queryText.isEmpty()){getString(R.string.search_for_result)}else{getString(R.string.no_record_found)+" $queryText ...."}
             binding.emptyView.visibility = View.VISIBLE
             binding.emptyView.text = text
         }
@@ -68,7 +68,6 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
     private lateinit var shapeAdapter: ShapeAdapter
 
     private fun setRecyclerView(dataList: ArrayList<ShapeModelData>) {
-        workRunnable = Runnable { this.performSearch() }
         shapeAdapter = ShapeAdapter(this)
         val categoryLinearLayoutManager = GridLayoutManager(this,4)
         categoryLinearLayoutManager.orientation = LinearLayoutManager.VERTICAL
@@ -79,7 +78,7 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
 
     private fun performSearch() {
         search?.let {
-            if (query.isNotEmpty() && it.query.toString().equals(query, ignoreCase = true)) {
+            if (queryText.isNotEmpty() && it.query.toString().equals(queryText, ignoreCase = true)) {
                 subscribeDataCallBack()
             }
         }
@@ -90,24 +89,18 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             val manager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
             var menuItem: MenuItem? = menu?.findItem(R.id.search)
-            var queryText = query
             menuItem?.let { menuItem->
                 menuItem.isVisible = true
                 search = menu?.findItem(R.id.search)?.actionView as SearchView
                 search?.apply {
                     this.visibility = View.VISIBLE
-                    this.setSearchableInfo(manager.getSearchableInfo(componentName))
-                    this.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                        override fun onQueryTextSubmit(s: String): Boolean {
-                            return true
-                        }
-                        override fun onQueryTextChange(query: String): Boolean {
-                            reloadAdapter(query)
-                            return true
-                        }
-                    })
-                    this.setOnSearchClickListener { }
-                    this.setOnCloseListener { false }
+                    RxSearchView.queryTextChanges(this)
+                            .debounce(250, TimeUnit.MILLISECONDS)
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe {
+                                queryText =it.toString()
+                                performSearch()
+                            }
                     if(queryText.isNotEmpty()){
                         this.setQuery(queryText,false)
                     }
@@ -116,13 +109,6 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
         }
         return true
     }
-
-    private fun reloadAdapter(currentQuery: String) {
-        query = currentQuery
-        handler.removeCallbacks(workRunnable)
-        handler.postDelayed(workRunnable, SEARCH_DELAY.toLong())
-    }
-
     private fun hideProgress() {
         binding.progressBar.visibility = View.GONE
     }
@@ -136,7 +122,7 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
         var model = ResultModel()
         model.data = dataList
         outState.putSerializable(Utils.LIST_DATA,model)
-        outState.putString(Utils.QUERY,query)
+        outState.putString(Utils.QUERY,queryText)
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -148,7 +134,7 @@ class ShapeListActivity : AppCompatActivity(), ShapeAdapter.OnShapeClickListener
         }
         var queryText =  savedInstanceState.getString(Utils.QUERY)
         if(queryText?.isNotEmpty()==true) {
-            query = queryText
+            this.queryText = queryText
         }
     }
     override fun onCallBack(success: Boolean?, data: List<ShapeModelData>, error: Throwable?) {
