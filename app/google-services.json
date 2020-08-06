@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "193107294516",
+    "firebase_url": "https://axxessapp-mvvm-recycler-retro.firebaseio.com",
+    "project_id": "axxessapp-mvvm-recycler-retro",
+    "storage_bucket": "axxessapp-mvvm-recycler-retro.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193107294516:android:feb70a210aca19f2de0d61",
+        "android_client_info": {
+          "package_name": "com.axxessapp.mvvmretroexample"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "193107294516-u8edlvlao92ku4te2hfcpb0hf25tbs32.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNdCsBmYk_zF1TOxakvMcLY--VwXgAztk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "193107294516-u8edlvlao92ku4te2hfcpb0hf25tbs32.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
